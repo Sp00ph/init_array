@@ -34,10 +34,7 @@ pub fn init_boxed_array<T, F, const N: usize>(f: F) -> Box<[T; N], Global>
 where
 	F: FnMut(usize) -> T,
 {
-	// SAFETY: Assuming that `MaybeUninit<MaybeUninit<T>>` is initialized is safe, as the inner `MaybeUninit<T>` still
-	// doesn't guarantee that the `T` is initialized, so assuming that an array of `MaybeUninit`s is initialized is
-	// safe too.
-	let mut arr = unsafe { Box::new(MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init()) };
+	let mut arr = Box::new(MaybeUninit::uninit_array::<N>());
 
 	init_slice(&mut *arr, f);
 
@@ -73,7 +70,7 @@ where
 /// assert_eq!(arr, Box::new([1, 3, 6, 10, 15]));
 /// ```
 #[inline]
-pub fn init_boxed_array_in<T, F, A, const N: usize>(f: F, alloc: A) -> Box<[T; N], Global>
+pub fn init_boxed_array_in<T, F, A, const N: usize>(f: F, alloc: A) -> Box<[T; N], A>
 where
 	F: FnMut(usize) -> T,
 	A: Allocator,
@@ -87,7 +84,8 @@ where
 
 	// SAFETY: `init_slice` initialized the entire slice that is given to it, which in this case is the entire array.
 	// Because all the items have been initialized, it's safe to transform it into the initialized array by casting the pointer.
-	unsafe { Box::from_raw(Box::into_raw(arr) as _) }
+	let (ptr, alloc) = Box::into_raw_with_allocator(arr);
+	unsafe { Box::from_raw_in(ptr as _, alloc) }
 }
 
 /// Initialize a dynamically-sized heap-allocated slice.
@@ -114,7 +112,7 @@ where
 /// assert_eq!(&*arr, &[1, 3, 6, 10, 15]);
 /// ```
 #[inline]
-pub fn init_boxed_slice<T, F>(n: usize, f: F) -> Box<[T]>
+pub fn init_boxed_slice<T, F>(n: usize, f: F) -> Box<[T], Global>
 where
 	F: FnMut(usize) -> T,
 {
@@ -158,11 +156,12 @@ where
 	F: FnMut(usize) -> T,
 	A: Allocator
 {
-	let mut arr = Box::new_uninit_slice_in(n, &alloc);
+	let mut arr = Box::new_uninit_slice_in(n, alloc);
 
 	init_slice(&mut arr, f);
 
 	// SAFETY: `init_slice` initialized the entire slice that is given to it, which in this case is the entire allocated slice.
 	// Because all the items have been initialized, it's safe to transform it into the initialized slice by casting the pointer.
-	unsafe { Box::from_raw_in(Box::into_raw(arr) as _, alloc) }
+	let (ptr, alloc) = Box::into_raw_with_allocator(arr);
+	unsafe { Box::from_raw_in(ptr as _, alloc) }
 }
