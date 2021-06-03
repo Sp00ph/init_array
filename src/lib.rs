@@ -17,7 +17,7 @@
 //! ```
 //!
 //! Normally, there are a few different ways of initializing an array itemwise, including:
-//! * Using an array of [`Option`]s, initializing it them [`None`] and then initializing them to [`Some(computation())`](core::option::Option::Some).
+//! * Using an array of [`Option`]s, initializing them all to [`None`] and then initializing each one to [`Some(computation())`](core::option::Option::Some).
 //! * Using a [`Vec`](alloc::vec::Vec) and incrementally pushing items to it.
 //! * Using an array of [`MaybeUninit`]s, gradually initializing them and then transmuting the array. This requires usage of `unsafe` code.
 //!
@@ -27,7 +27,7 @@
 //! * [`init_boxed_array`] to initialize a heap-allocated fixed-size array.
 //! * [`init_boxed_slice`] to initialize a heap-allocated dynamically-sized slice.
 //!
-//! All of these functions share the property that, if an the initialization of any item panics (i.e. if the stack unwinds), all the
+//! All of these functions share the property that, if the initialization of any item panics (i.e. if the stack unwinds), all the
 //! already initialized items are dropped, minimizing the risk of a memory leak.
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(feature = "nightly", feature(allocator_api, maybe_uninit_extra, maybe_uninit_uninit_array, new_uninit))]
