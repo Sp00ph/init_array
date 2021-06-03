@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2018"
 license = "Zlib OR Apache-2.0 OR MIT"
 authors = ["Markus Everling <markuseverling@gmail.com>"]
-keywords = ["arrays", "const generics"]
+keywords = ["arrays"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
