@@ -1,9 +1,9 @@
 use crate::init_slice;
 use alloc::{
-	alloc::{Allocator, Global},
+	alloc::{handle_alloc_error, AllocError, Allocator, Global, Layout},
 	boxed::Box,
 };
-use core::mem::MaybeUninit;
+use core::{mem::MaybeUninit, ptr::NonNull};
 
 /// Initialize a fixed-sized heap-allocated array.
 ///
@@ -34,13 +34,16 @@ pub fn init_boxed_array<T, F, const N: usize>(f: F) -> Box<[T; N], Global>
 where
 	F: FnMut(usize) -> T,
 {
-	let mut arr = Box::new(MaybeUninit::uninit_array::<N>());
+	init_boxed_array_in(f, Global)
+}
 
-	init_slice(&mut *arr, f);
-
-	// SAFETY: `init_slice` initialized the entire slice that is given to it, which in this case is the entire array.
-	// Because all the items have been initialized, it's safe to transform it into the initialized array by casting the pointer.
-	unsafe { Box::from_raw(Box::into_raw(arr) as _) }
+/// Does the same as [`init_boxed_array`], but returns an error on allocation error, instead of aborting the program.
+#[inline]
+pub fn try_init_boxed_array<T, F, const N: usize>(f: F) -> Result<Box<[T; N], Global>, AllocError>
+where
+	F: FnMut(usize) -> T
+{
+	try_init_boxed_array_in(f, Global)	
 }
 
 /// Initialize a fixed-sized heap-allocated array.
@@ -75,17 +78,36 @@ where
 	F: FnMut(usize) -> T,
 	A: Allocator,
 {
-	// SAFETY: Assuming that `MaybeUninit<MaybeUninit<T>>` is initialized is safe, as the inner `MaybeUninit<T>` still
-	// doesn't guarantee that the `T` is initialized, so assuming that an array of `MaybeUninit`s is initialized is
-	// safe too.
-	let mut arr = Box::new_in(MaybeUninit::uninit_array::<N>(), alloc);
+	match try_init_boxed_array_in(f, alloc) {
+		Ok(b) => b,
+		Err(_) => handle_alloc_error(Layout::new::<[T; N]>()),
+	}
+}
 
-	init_slice(&mut *arr, f);
-
-	// SAFETY: `init_slice` initialized the entire slice that is given to it, which in this case is the entire array.
-	// Because all the items have been initialized, it's safe to transform it into the initialized array by casting the pointer.
-	let (ptr, alloc) = Box::into_raw_with_allocator(arr);
-	unsafe { Box::from_raw_in(ptr as _, alloc) }
+/// Does the same as [`init_boxed_array_in`], but returns an error on allocation error, instead of aborting the program.
+#[inline]
+pub fn try_init_boxed_array_in<T, F, A, const N: usize>(
+	f: F,
+	alloc: A,
+) -> Result<Box<[T; N], A>, AllocError>
+where
+	F: FnMut(usize) -> T,
+	A: Allocator,
+{
+	let layout = Layout::new::<[MaybeUninit<T>; N]>();
+	let ptr = if layout.size() != 0 {
+		alloc.allocate(layout)?.as_ptr() as *mut [MaybeUninit<T>; N]
+	} else {
+		// SAFETY: If the array is zero-sized, it's safe to use a dangling pointer.
+		NonNull::dangling().as_ptr()
+	};
+	// SAFETY: We just allocated this memory, so accessing it is safe. Getting a reference
+	// to it is also safe, even though it's uninitialized, because `MaybeUninit` does not need to be
+	// initialized.
+	let arr = unsafe { &mut *ptr };
+	init_slice(arr, f);
+	// SAFETY: Because we allocated this pointer ourselves, we own the memory and can transfer it into the box.
+	Ok(unsafe { Box::from_raw_in(ptr as _, alloc) })
 }
 
 /// Initialize a dynamically-sized heap-allocated slice.
@@ -116,13 +138,7 @@ pub fn init_boxed_slice<T, F>(n: usize, f: F) -> Box<[T], Global>
 where
 	F: FnMut(usize) -> T,
 {
-	let mut arr = Box::new_uninit_slice(n);
-
-	init_slice(&mut arr, f);
-
-	// SAFETY: `init_slice` initialized the entire slice that is given to it, which in this case is the entire allocated slice.
-	// Because all the items have been initialized, it's safe to transform it into the initialized slice by casting the pointer.
-	unsafe { Box::from_raw(Box::into_raw(arr) as _) }
+	init_boxed_slice_in(n, f, Global)
 }
 
 /// Initialize a dynamically-sized heap-allocated slice.
@@ -154,7 +170,7 @@ where
 pub fn init_boxed_slice_in<T, F, A>(n: usize, f: F, alloc: A) -> Box<[T], A>
 where
 	F: FnMut(usize) -> T,
-	A: Allocator
+	A: Allocator,
 {
 	let mut arr = Box::new_uninit_slice_in(n, alloc);
 

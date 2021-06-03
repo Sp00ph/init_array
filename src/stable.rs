@@ -37,15 +37,10 @@ pub fn init_boxed_array<T, F, const N: usize>(f: F) -> Box<[T; N]>
 where
 	F: FnMut(usize) -> T,
 {
-	// SAFETY: Assuming that `MaybeUninit<MaybeUninit<T>>` is initialized is safe, as the inner `MaybeUninit<T>` still
-	// doesn't guarantee that the `T` is initialized, so assuming that an array of `MaybeUninit`s is initialized is
-	// safe too.
-	let mut arr = unsafe { Box::new(MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init()) };
+	let arr = init_boxed_slice(N, f);
 
-	init_slice(&mut *arr, f);
-
-	// SAFETY: `init_slice` initialized the entire slice that is given to it, which in this case is the entire array.
-	// Because all the items have been initialized, it's safe to transform it into the initialized array by casting the pointer.
+	// SAFETY: `init_boxed_slice` returns a slice whose length is equal to its first argument. Because we give it `N` as the length,
+	// transmuting (or pointer casting) to a fixed size array is safe.
 	unsafe { Box::from_raw(Box::into_raw(arr) as _) }
 }
 
