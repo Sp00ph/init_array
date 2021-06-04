@@ -29,10 +29,10 @@
 //!
 //! If you have the `nightly` feature enabled, you will have access to additional versions of the `init_boxed_...` functions compliant with the new Allocator API.
 //!
-//! 
-//! If you turn off the `alloc` feature, which is enabled by default, you can use this crate in a `#[no_std]` context without an allocator. 
+//!
+//! If you turn off the `alloc` feature, which is enabled by default, you can use this crate in a `#[no_std]` context without an allocator.
 //! The crate is fully `#[no_std]` compatible.
-//! 
+//!
 //! All of these functions share the property that, if the initialization of any item panics (i.e. if the stack unwinds), all the
 //! already initialized items are dropped, minimizing the risk of a memory leak.
 #![cfg_attr(not(test), no_std)]
@@ -153,7 +153,7 @@ mod tests {
 		assert_eq!(*init_boxed_array::<_, _, 3>(|i| i), [0, 1, 2]);
 		assert_eq!(*init_boxed_array::<_, _, 5>(|i| i * i), [0, 1, 4, 9, 16]);
 	}
-	
+
 	#[cfg(feature = "alloc")]
 	#[test]
 	fn boxed_slice() {
@@ -161,7 +161,7 @@ mod tests {
 		assert_eq!(*init_boxed_slice(3, |i| i), [0, 1, 2]);
 		assert_eq!(*init_boxed_slice(5, |i| i * i), [0, 1, 4, 9, 16]);
 	}
-	
+
 	#[cfg(feature = "alloc")]
 	#[test]
 	fn readme_example() {

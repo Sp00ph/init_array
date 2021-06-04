@@ -100,13 +100,14 @@ where
 	} else {
 		// SAFETY: If the array is zero-sized, it's safe to use a dangling pointer.
 		NonNull::dangling().as_ptr()
-	};
-	// SAFETY: We just allocated this memory, so accessing it is safe. Getting a reference
-	// to it is also safe, even though it's uninitialized, because `MaybeUninit` does not need to be
-	// initialized.
-	let arr = unsafe { &mut *ptr };
-	init_slice(arr, f);
-	// SAFETY: Because we allocated this pointer ourselves, we own the memory and can transfer it into the box.
+	}
+	;
+	// SAFETY: We just allocated this memory, so turning it into a Box is safe. 
+	let mut arr = unsafe { Box::from_raw_in(ptr, alloc) };
+	init_slice(&mut *arr, f);
+
+	// SAFETY: The entire array has been initialized, so this pointer casting is safe.
+	let (ptr, alloc) = Box::into_raw_with_allocator(arr);
 	Ok(unsafe { Box::from_raw_in(ptr as _, alloc) })
 }
 
