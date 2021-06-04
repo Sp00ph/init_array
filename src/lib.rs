@@ -29,6 +29,10 @@
 //!
 //! If you have the `nightly` feature enabled, you will have access to additional versions of the `init_boxed_...` functions compliant with the new Allocator API.
 //!
+//! 
+//! If you turn off the `alloc` feature, which is enabled by default, you can use this crate in a `#[no_std]` context without an allocator. 
+//! The crate is fully `#[no_std]` compatible.
+//! 
 //! All of these functions share the property that, if the initialization of any item panics (i.e. if the stack unwinds), all the
 //! already initialized items are dropped, minimizing the risk of a memory leak.
 #![cfg_attr(not(test), no_std)]
@@ -42,6 +46,7 @@
 	)
 )]
 
+#[cfg(feature = "alloc")]
 extern crate alloc;
 
 use core::mem::{forget, transmute_copy, MaybeUninit};
@@ -49,7 +54,9 @@ use core::ptr::{drop_in_place, slice_from_raw_parts_mut};
 
 #[cfg_attr(not(feature = "nightly"), path = "stable.rs")]
 #[cfg_attr(feature = "nightly", path = "nightly.rs")]
+#[cfg(feature = "alloc")]
 mod boxed;
+#[cfg(feature = "alloc")]
 pub use boxed::*;
 
 #[inline]
@@ -139,20 +146,23 @@ mod tests {
 		assert_eq!(init_array::<_, _, 5>(|i| i * i), [0, 1, 4, 9, 16]);
 	}
 
+	#[cfg(feature = "alloc")]
 	#[test]
 	fn boxed_array() {
 		assert_eq!(*init_boxed_array::<_, _, 3>(|_| 0), [0, 0, 0]);
 		assert_eq!(*init_boxed_array::<_, _, 3>(|i| i), [0, 1, 2]);
 		assert_eq!(*init_boxed_array::<_, _, 5>(|i| i * i), [0, 1, 4, 9, 16]);
 	}
-
+	
+	#[cfg(feature = "alloc")]
 	#[test]
 	fn boxed_slice() {
 		assert_eq!(*init_boxed_slice(3, |_| 0), [0, 0, 0]);
 		assert_eq!(*init_boxed_slice(3, |i| i), [0, 1, 2]);
 		assert_eq!(*init_boxed_slice(5, |i| i * i), [0, 1, 4, 9, 16]);
 	}
-
+	
+	#[cfg(feature = "alloc")]
 	#[test]
 	fn readme_example() {
 		let arr = init_array(|i| i * i);
@@ -203,6 +213,7 @@ mod tests {
 			assert_eq!(COUNTER.load(SeqCst), 0);
 		});
 
+		#[cfg(feature = "alloc")]
 		let _ = catch_unwind(|| {
 			init_boxed_array::<_, _, 10>(|i| {
 				if i == 7 {
@@ -214,6 +225,7 @@ mod tests {
 			assert_eq!(COUNTER.load(SeqCst), 0);
 		});
 
+		#[cfg(feature = "alloc")]
 		let _ = catch_unwind(|| {
 			init_boxed_slice(10, |i| {
 				if i == 7 {

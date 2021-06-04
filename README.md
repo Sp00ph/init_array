@@ -36,8 +36,12 @@ It provides three functions to initialize arrays itemwise:
 
 If you have the `nightly` feature enabled, you will have access to additional versions of the `init_boxed_...` functions compliant with the new Allocator API.
 
+If you turn off the `alloc` feature, which is enabled by default, you can use this crate in a `#[no_std]` context without an allocator. 
+The crate is fully `#[no_std]` compatible.
+
 All of these functions share the property that, if the initialization of any item panics (i.e. if the stack unwinds), all the
 already initialized items are dropped, minimizing the risk of a memory leak.
+
 
 # Examples
 
