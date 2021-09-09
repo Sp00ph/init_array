@@ -1,5 +1,7 @@
 # Initialize arrays itemwise
 
+[Click here for the documentation.](https://docs.rs/init_array)
+
 Normally, when using fixed size arrays, you can only initialize them with a const value.
 
 Example:

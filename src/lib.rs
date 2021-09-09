@@ -56,8 +56,11 @@ use core::ptr::{drop_in_place, slice_from_raw_parts_mut};
 #[cfg_attr(feature = "nightly", path = "nightly.rs")]
 #[cfg(feature = "alloc")]
 mod boxed;
+mod array_ext;
 #[cfg(feature = "alloc")]
 pub use boxed::*;
+
+pub use array_ext::*;
 
 #[inline]
 pub(crate) fn init_slice<T, F: FnMut(usize) -> T>(s: &mut [MaybeUninit<T>], mut f: F) {
