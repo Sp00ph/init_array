@@ -33,17 +33,20 @@
 //! If you turn off the `alloc` feature, which is enabled by default, you can use this crate in a `#[no_std]` context without an allocator.
 //! The crate is fully `#[no_std]` compatible.
 //!
+//! In addition to the 3 functions mentioned above, there are also two extension traits provided, [`ArrayExt`] and [`SliceExt`],
+//! which provide the same functionality as the free functions.
+//!
 //! All of these functions share the property that, if the initialization of any item panics (i.e. if the stack unwinds), all the
 //! already initialized items are dropped, minimizing the risk of a memory leak.
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(
-	feature = "nightly",
-	feature(
-		allocator_api,
-		maybe_uninit_extra,
-		maybe_uninit_uninit_array,
-		new_uninit
-	)
+    feature = "nightly",
+    feature(
+        allocator_api,
+        maybe_uninit_extra,
+        maybe_uninit_uninit_array,
+        new_uninit
+    )
 )]
 
 #[cfg(feature = "alloc")]
