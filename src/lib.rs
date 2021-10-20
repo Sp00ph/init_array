@@ -55,11 +55,11 @@ extern crate alloc;
 use core::mem::{forget, transmute_copy, MaybeUninit};
 use core::ptr::{drop_in_place, slice_from_raw_parts_mut};
 
+mod array_ext;
 #[cfg_attr(not(feature = "nightly"), path = "stable.rs")]
 #[cfg_attr(feature = "nightly", path = "nightly.rs")]
 #[cfg(feature = "alloc")]
 mod boxed;
-mod array_ext;
 #[cfg(feature = "alloc")]
 pub use boxed::*;
 
@@ -67,33 +67,33 @@ pub use array_ext::*;
 
 #[inline]
 pub(crate) fn init_slice<T, F: FnMut(usize) -> T>(s: &mut [MaybeUninit<T>], mut f: F) {
-	struct Guard<T> {
-		ptr: *mut T,
-		len: usize,
-	}
+    struct Guard<T> {
+        ptr: *mut T,
+        len: usize,
+    }
 
-	impl<T> Drop for Guard<T> {
-		fn drop(&mut self) {
-			// SAFETY: It is guaranteed that exactly `self.len` items in the slice have been initialized.
-			// `self.ptr` is guaranteed to be valid, even if `T` is a ZST, because it has been passed in
-			// through the slice `s`.
-			unsafe { drop_in_place(slice_from_raw_parts_mut(self.ptr, self.len)) };
-		}
-	}
+    impl<T> Drop for Guard<T> {
+        fn drop(&mut self) {
+            // SAFETY: It is guaranteed that exactly `self.len` items in the slice have been initialized.
+            // `self.ptr` is guaranteed to be valid, even if `T` is a ZST, because it has been passed in
+            // through the slice `s`.
+            unsafe { drop_in_place(slice_from_raw_parts_mut(self.ptr, self.len)) };
+        }
+    }
 
-	let mut guard = Guard {
-		ptr: s.as_mut_ptr() as *mut T,
-		len: 0,
-	};
+    let mut guard = Guard {
+        ptr: s.as_mut_ptr() as *mut T,
+        len: 0,
+    };
 
-	for (i, a) in s.iter_mut().enumerate() {
-		// Dropping a `MaybeUninit<T>` does nothing, so assigning to it like this
-		// does not cause any memory unsafety issues.
-		*a = MaybeUninit::new(f(i));
-		guard.len += 1;
-	}
+    for (i, a) in s.iter_mut().enumerate() {
+        // Dropping a `MaybeUninit<T>` does nothing, so assigning to it like this
+        // does not cause any memory unsafety issues.
+        *a = MaybeUninit::new(f(i));
+        guard.len += 1;
+    }
 
-	forget(guard);
+    forget(guard);
 }
 
 /// Initialize a fixed-sized stack-based array.
@@ -123,124 +123,124 @@ pub(crate) fn init_slice<T, F: FnMut(usize) -> T>(s: &mut [MaybeUninit<T>], mut 
 #[inline]
 pub fn init_array<T, F, const N: usize>(f: F) -> [T; N]
 where
-	F: FnMut(usize) -> T,
+    F: FnMut(usize) -> T,
 {
-	// SAFETY: Assuming that `MaybeUninit<MaybeUninit<T>>` is initialized is safe, as the inner `MaybeUninit<T>` still
-	// doesn't guarantee that the `T` is initialized, so assuming that an array of `MaybeUninit`s is initialized is
-	// safe too.
-	let mut arr = unsafe { MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init() };
+    // SAFETY: Assuming that `MaybeUninit<MaybeUninit<T>>` is initialized is safe, as the inner `MaybeUninit<T>` still
+    // doesn't guarantee that the `T` is initialized, so assuming that an array of `MaybeUninit`s is initialized is
+    // safe too.
+    let mut arr = unsafe { MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init() };
 
-	init_slice(&mut arr, f);
+    init_slice(&mut arr, f);
 
-	// SAFETY: `init_slice` initializes all the items in the array, so it's safe to transmute it into the initialized type
-	unsafe { transmute_copy(&arr) }
+    // SAFETY: `init_slice` initializes all the items in the array, so it's safe to transmute it into the initialized type
+    unsafe { transmute_copy(&arr) }
 }
 
 #[cfg(test)]
 mod tests {
-	use std::{
-		panic::catch_unwind,
-		sync::atomic::{AtomicUsize, Ordering::SeqCst},
-	};
+    use std::{
+        panic::catch_unwind,
+        sync::atomic::{AtomicUsize, Ordering::SeqCst},
+    };
 
-	use super::*;
+    use super::*;
 
-	#[test]
-	fn array() {
-		assert_eq!(init_array::<_, _, 3>(|_| 0), [0, 0, 0]);
-		assert_eq!(init_array::<_, _, 3>(|i| i), [0, 1, 2]);
-		assert_eq!(init_array::<_, _, 5>(|i| i * i), [0, 1, 4, 9, 16]);
-	}
+    #[test]
+    fn array() {
+        assert_eq!(init_array::<_, _, 3>(|_| 0), [0, 0, 0]);
+        assert_eq!(init_array::<_, _, 3>(|i| i), [0, 1, 2]);
+        assert_eq!(init_array::<_, _, 5>(|i| i * i), [0, 1, 4, 9, 16]);
+    }
 
-	#[cfg(feature = "alloc")]
-	#[test]
-	fn boxed_array() {
-		assert_eq!(*init_boxed_array::<_, _, 3>(|_| 0), [0, 0, 0]);
-		assert_eq!(*init_boxed_array::<_, _, 3>(|i| i), [0, 1, 2]);
-		assert_eq!(*init_boxed_array::<_, _, 5>(|i| i * i), [0, 1, 4, 9, 16]);
-	}
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn boxed_array() {
+        assert_eq!(*init_boxed_array::<_, _, 3>(|_| 0), [0, 0, 0]);
+        assert_eq!(*init_boxed_array::<_, _, 3>(|i| i), [0, 1, 2]);
+        assert_eq!(*init_boxed_array::<_, _, 5>(|i| i * i), [0, 1, 4, 9, 16]);
+    }
 
-	#[cfg(feature = "alloc")]
-	#[test]
-	fn boxed_slice() {
-		assert_eq!(*init_boxed_slice(3, |_| 0), [0, 0, 0]);
-		assert_eq!(*init_boxed_slice(3, |i| i), [0, 1, 2]);
-		assert_eq!(*init_boxed_slice(5, |i| i * i), [0, 1, 4, 9, 16]);
-	}
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn boxed_slice() {
+        assert_eq!(*init_boxed_slice(3, |_| 0), [0, 0, 0]);
+        assert_eq!(*init_boxed_slice(3, |i| i), [0, 1, 2]);
+        assert_eq!(*init_boxed_slice(5, |i| i * i), [0, 1, 4, 9, 16]);
+    }
 
-	#[cfg(feature = "alloc")]
-	#[test]
-	fn readme_example() {
-		let arr = init_array(|i| i * i);
-		assert_eq!(arr, [0, 1, 4, 9, 16]);
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn readme_example() {
+        let arr = init_array(|i| i * i);
+        assert_eq!(arr, [0, 1, 4, 9, 16]);
 
-		let arr = init_boxed_array(|i| i * i);
-		assert_eq!(arr, Box::new([0, 1, 4, 9, 16]));
+        let arr = init_boxed_array(|i| i * i);
+        assert_eq!(arr, Box::new([0, 1, 4, 9, 16]));
 
-		let arr = init_boxed_slice(5, |i| i * i);
-		assert_eq!(&*arr, &[0, 1, 4, 9, 16]);
+        let arr = init_boxed_slice(5, |i| i * i);
+        assert_eq!(&*arr, &[0, 1, 4, 9, 16]);
 
-		let mut state = 0;
-		let arr = init_array(move |i| {
-			state += i + 1;
-			state
-		});
+        let mut state = 0;
+        let arr = init_array(move |i| {
+            state += i + 1;
+            state
+        });
 
-		assert_eq!(arr, [1, 3, 6, 10, 15, 21, 28, 36, 45, 55]);
-	}
+        assert_eq!(arr, [1, 3, 6, 10, 15, 21, 28, 36, 45, 55]);
+    }
 
-	#[test]
-	fn drop() {
-		static COUNTER: AtomicUsize = AtomicUsize::new(0);
+    #[test]
+    fn drop() {
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-		struct Foo;
+        struct Foo;
 
-		impl Foo {
-			fn new() -> Self {
-				COUNTER.fetch_add(1, SeqCst);
-				Self
-			}
-		}
+        impl Foo {
+            fn new() -> Self {
+                COUNTER.fetch_add(1, SeqCst);
+                Self
+            }
+        }
 
-		impl Drop for Foo {
-			fn drop(&mut self) {
-				COUNTER.fetch_sub(1, SeqCst);
-			}
-		}
+        impl Drop for Foo {
+            fn drop(&mut self) {
+                COUNTER.fetch_sub(1, SeqCst);
+            }
+        }
 
-		let _ = catch_unwind(|| {
-			init_array::<_, _, 10>(|i| {
-				if i == 7 {
-					assert_eq!(COUNTER.load(SeqCst), 6);
-					panic!()
-				}
-				Foo::new()
-			});
-			assert_eq!(COUNTER.load(SeqCst), 0);
-		});
+        let _ = catch_unwind(|| {
+            init_array::<_, _, 10>(|i| {
+                if i == 7 {
+                    assert_eq!(COUNTER.load(SeqCst), 6);
+                    panic!()
+                }
+                Foo::new()
+            });
+            assert_eq!(COUNTER.load(SeqCst), 0);
+        });
 
-		#[cfg(feature = "alloc")]
-		let _ = catch_unwind(|| {
-			init_boxed_array::<_, _, 10>(|i| {
-				if i == 7 {
-					assert_eq!(COUNTER.load(SeqCst), 6);
-					panic!()
-				}
-				Foo::new()
-			});
-			assert_eq!(COUNTER.load(SeqCst), 0);
-		});
+        #[cfg(feature = "alloc")]
+        let _ = catch_unwind(|| {
+            init_boxed_array::<_, _, 10>(|i| {
+                if i == 7 {
+                    assert_eq!(COUNTER.load(SeqCst), 6);
+                    panic!()
+                }
+                Foo::new()
+            });
+            assert_eq!(COUNTER.load(SeqCst), 0);
+        });
 
-		#[cfg(feature = "alloc")]
-		let _ = catch_unwind(|| {
-			init_boxed_slice(10, |i| {
-				if i == 7 {
-					assert_eq!(COUNTER.load(SeqCst), 6);
-					panic!()
-				}
-				Foo::new()
-			});
-			assert_eq!(COUNTER.load(SeqCst), 0);
-		});
-	}
+        #[cfg(feature = "alloc")]
+        let _ = catch_unwind(|| {
+            init_boxed_slice(10, |i| {
+                if i == 7 {
+                    assert_eq!(COUNTER.load(SeqCst), 6);
+                    panic!()
+                }
+                Foo::new()
+            });
+            assert_eq!(COUNTER.load(SeqCst), 0);
+        });
+    }
 }

@@ -4,33 +4,33 @@ use alloc::boxed::Box;
 use self::sealed::Sealed;
 
 mod sealed {
-	pub trait Sealed {}
+    pub trait Sealed {}
 
-	impl<T, const N: usize> Sealed for [T; N] {}
+    impl<T, const N: usize> Sealed for [T; N] {}
 
-	impl<T> Sealed for [T] {}
+    impl<T> Sealed for [T] {}
 }
 
 /// Extension trait for constant sized arrays.
-/// 
+///
 /// Allows you to initialize an array like this:
 /// ```
 /// use init_array::ArrayExt;
-/// 
+///
 /// let arr: [usize; 5] = <[usize; 5]>::generate(|i| i * i);
 /// assert_eq!(arr, [0, 1, 4, 9, 16]);
-/// 
+///
 /// let arr: Box<[usize; 5]> = <[usize; 5]>::generate_boxed(|i| i * i);
 /// assert_eq!(arr, Box::new([0, 1, 4, 9, 16]));
 /// ```
-pub trait ArrayExt : Sealed {
+pub trait ArrayExt: Sealed {
     type Elem;
 
     fn generate<F: FnMut(usize) -> Self::Elem>(f: F) -> Self
     where
         Self: Sized;
 
-	#[cfg(feature = "alloc")]
+    #[cfg(feature = "alloc")]
     fn generate_boxed<F: FnMut(usize) -> Self::Elem>(f: F) -> Box<Self>;
 }
 
@@ -44,10 +44,10 @@ pub trait ArrayExt : Sealed {
 /// let arr: Box<[usize]> = <[usize]>::generate_boxed(5, |i| i * i);
 /// assert_eq!(&*arr, &[0, 1, 4, 9, 16]);
 /// ```
-pub trait SliceExt : Sealed {
-	type Elem;
+pub trait SliceExt: Sealed {
+    type Elem;
 
-	fn generate_boxed<F: FnMut(usize) -> Self::Elem>(n: usize, f: F) -> Box<Self>;
+    fn generate_boxed<F: FnMut(usize) -> Self::Elem>(n: usize, f: F) -> Box<Self>;
 }
 
 impl<T, const N: usize> ArrayExt for [T; N] {
@@ -55,11 +55,12 @@ impl<T, const N: usize> ArrayExt for [T; N] {
 
     fn generate<F: FnMut(usize) -> Self::Elem>(f: F) -> Self
     where
-        Self: Sized {
+        Self: Sized,
+    {
         crate::init_array(f)
     }
 
-	#[cfg(feature = "alloc")]
+    #[cfg(feature = "alloc")]
     fn generate_boxed<F: FnMut(usize) -> Self::Elem>(f: F) -> Box<Self> {
         crate::init_boxed_array(f)
     }

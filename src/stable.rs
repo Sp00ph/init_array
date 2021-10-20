@@ -1,11 +1,11 @@
 use crate::init_slice;
 use alloc::{
-	alloc::{alloc, Layout},
-	boxed::Box,
+    alloc::{alloc, Layout},
+    boxed::Box,
 };
 use core::{
-	mem::MaybeUninit,
-	ptr::{slice_from_raw_parts_mut, NonNull},
+    mem::MaybeUninit,
+    ptr::{slice_from_raw_parts_mut, NonNull},
 };
 
 /// Initialize a fixed-sized heap-allocated array.
@@ -35,13 +35,13 @@ use core::{
 #[inline]
 pub fn init_boxed_array<T, F, const N: usize>(f: F) -> Box<[T; N]>
 where
-	F: FnMut(usize) -> T,
+    F: FnMut(usize) -> T,
 {
-	let arr = init_boxed_slice(N, f);
+    let arr = init_boxed_slice(N, f);
 
-	// SAFETY: `init_boxed_slice` returns a slice whose length is equal to its first argument. Because we give it `N` as the length,
-	// transmuting (or pointer casting) to a fixed size array is safe.
-	unsafe { Box::from_raw(Box::into_raw(arr) as _) }
+    // SAFETY: `init_boxed_slice` returns a slice whose length is equal to its first argument. Because we give it `N` as the length,
+    // transmuting (or pointer casting) to a fixed size array is safe.
+    unsafe { Box::from_raw(Box::into_raw(arr) as _) }
 }
 
 /// Initialize a dynamically-sized heap-allocated slice.
@@ -70,26 +70,26 @@ where
 #[inline]
 pub fn init_boxed_slice<T, F>(n: usize, f: F) -> Box<[T]>
 where
-	F: FnMut(usize) -> T,
+    F: FnMut(usize) -> T,
 {
-	unsafe {
-		let layout = Layout::array::<T>(n).expect("Layout overflow");
+    unsafe {
+        let layout = Layout::array::<T>(n).expect("Layout overflow");
 
-		// SAFETY: `Box::from_raw` gives a Box using the Global Allocator, which is also used in `alloc`, so
-		// getting a Box from a pointer given by `alloc` is safe.
-		let mut arr: Box<[MaybeUninit<T>]> = Box::from_raw(if layout.size() == 0 {
-			// SAFETY: `NonNull::dangling` returns a pointer which is guaranteed to be
-			// well aligned for `T`. This branch is hit if the slice length is 0 or if `T`
-			// is a ZST. In both of these cases a dangling well aligned pointer is valid for the slice.
-			slice_from_raw_parts_mut(NonNull::dangling().as_ptr(), n)
-		} else {
-			slice_from_raw_parts_mut(alloc(layout) as _, n)
-		});
+        // SAFETY: `Box::from_raw` gives a Box using the Global Allocator, which is also used in `alloc`, so
+        // getting a Box from a pointer given by `alloc` is safe.
+        let mut arr: Box<[MaybeUninit<T>]> = Box::from_raw(if layout.size() == 0 {
+            // SAFETY: `NonNull::dangling` returns a pointer which is guaranteed to be
+            // well aligned for `T`. This branch is hit if the slice length is 0 or if `T`
+            // is a ZST. In both of these cases a dangling well aligned pointer is valid for the slice.
+            slice_from_raw_parts_mut(NonNull::dangling().as_ptr(), n)
+        } else {
+            slice_from_raw_parts_mut(alloc(layout) as _, n)
+        });
 
-		init_slice(&mut arr, f);
+        init_slice(&mut arr, f);
 
-		// SAFETY: `init_slice` initialized the entire slice that is given to it, which in this case is the entire allocated slice.
-		// Because all the items have been initialized, it's safe to transform it into the initialized slice by casting the pointer.
-		Box::from_raw(Box::into_raw(arr) as _)
-	}
+        // SAFETY: `init_slice` initialized the entire slice that is given to it, which in this case is the entire allocated slice.
+        // Because all the items have been initialized, it's safe to transform it into the initialized slice by casting the pointer.
+        Box::from_raw(Box::into_raw(arr) as _)
+    }
 }
