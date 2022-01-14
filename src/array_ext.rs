@@ -19,9 +19,9 @@ mod sealed {
 ///
 /// let arr: [usize; 5] = <[usize; 5]>::generate(|i| i * i);
 /// assert_eq!(arr, [0, 1, 4, 9, 16]);
-///
-/// let arr: Box<[usize; 5]> = <[usize; 5]>::generate_boxed(|i| i * i);
-/// assert_eq!(arr, Box::new([0, 1, 4, 9, 16]));
+#[cfg_attr(feature = "alloc", doc = "")]
+#[cfg_attr(feature = "alloc", doc = "let arr: Box<[usize; 5]> = <[usize; 5]>::generate_boxed(|i| i * i);")]
+#[cfg_attr(feature = "alloc", doc = "assert_eq!(arr, Box::new([0, 1, 4, 9, 16]));")]
 /// ```
 pub trait ArrayExt: Sealed {
     type Elem;
@@ -66,6 +66,7 @@ impl<T, const N: usize> ArrayExt for [T; N] {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<T> SliceExt for [T] {
     type Elem = T;
 
