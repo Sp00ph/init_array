@@ -45,7 +45,6 @@
         allocator_api,
         maybe_uninit_extra,
         maybe_uninit_uninit_array,
-        new_uninit
     )
 )]
 
