@@ -36,6 +36,8 @@ It provides three functions to initialize arrays itemwise:
 * `init_boxed_array` to initialize a heap-allocated fixed-size array.
 * `init_boxed_slice` to initialize a heap-allocated dynamically-sized slice.
 
+There is also a `try_init_array` function which allows to initialize an array fallibly and return the error early.
+
 If you have the `nightly` feature enabled, you will have access to additional versions of the `init_boxed_...` functions compliant with the new Allocator API.
 
 If you turn off the `alloc` feature, which is enabled by default, you can use this crate in a `#[no_std]` context without an allocator. 

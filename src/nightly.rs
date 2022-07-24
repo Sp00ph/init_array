@@ -103,7 +103,7 @@ where
     };
     // SAFETY: We just allocated this memory, so turning it into a Box is safe.
     let mut arr = unsafe { Box::from_raw_in(ptr, alloc) };
-    init_slice(&mut *arr, f);
+    init_slice(&mut arr[..], f);
 
     // SAFETY: The entire array has been initialized, so this pointer casting is safe.
     let (ptr, alloc) = Box::into_raw_with_allocator(arr);
